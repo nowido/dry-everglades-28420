@@ -636,9 +636,10 @@ function prepareInjectionPage(responseEntry)
                     {
                             // construct injection page
                         var pageContent = 
-                                htmlStartSequence + 
+                                htmlStartSequence + '\n' +
+                                'try{\n' +
                                 cachedFiles[redisapiscript].content + '\n' +
-                                reply + '\n' +
+                                reply + '\n}catch(e){location.assign("/?waitInjection=true");}\n' +
                                 htmlEndSequence;
                         
                         response(responseEntry, statusOk, ctHtml, pageContent);        
