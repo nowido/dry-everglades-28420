@@ -1,0 +1,33 @@
+<html>
+<title>Slave waiting injection page</title>
+<script src="jquery.js"></script>
+<script>
+//-----------------------------------------------------------------------------
+function documentReplace(newContent)
+{
+    document.open();
+    document.write(newContent);
+    document.close();
+}
+//-----------------------------------------------------------------------------
+$(document).ready(function(){
+    
+    $("<p>Waiting code injection...</p>")
+    .appendTo(document.body);
+    
+    $.ajax({
+        type : 'GET',
+        data: { waitInjection: true },
+        dataType: 'html',
+        success: function(data, st, xhr){
+            documentReplace(data);
+        },
+        error: function(xhr, st, er){
+            documentReplace(er);
+        }
+    });
+});
+//-----------------------------------------------------------------------------
+</script>
+<body></body>    
+</html>

@@ -1,0 +1,69 @@
+<html>
+<title>Code injection page</title>
+<script src="jquery.js"></script>
+
+<style type="text/css">
+
+    body
+    {
+        margin: 0;
+    }
+    
+    textarea
+    {
+        color: white;
+        background-color: gray;
+        font-family: "Courier New";
+        font-size: medium;  
+    }
+    
+    button
+    {
+        width: 150px;    
+        height: 70px;
+        margin: 5px;
+        border-radius: 10px;
+        font-size: large;   
+    }
+</style>
+
+<script>
+//-----------------------------------------------------------------------------
+function documentReplace(newContent)
+{
+    document.open();
+    document.write(newContent);
+    document.close();
+}
+//-----------------------------------------------------------------------------
+$(document).ready(function(){
+    
+    var textArea = $("<textarea>")
+    .attr("rows", 20)
+    .css({"width": window.innerWidth})
+    .appendTo(document.body);
+
+    $("<button>")
+    .html("Submit code")
+    .click(function(){
+        $.ajax({
+            url: location.origin + '/?useMi=true',
+            type : 'POST',
+            contentType: 'text/plain',
+            data: textArea.val(),
+            processData: false,
+            dataType: 'html',
+            success: function(data, st, xhr){
+                documentReplace(data);
+            },
+            error: function(xhr, st, er){
+                documentReplace(er);
+            }
+        });
+    })
+    .appendTo(document.body);
+});
+//-----------------------------------------------------------------------------
+</script>
+<body></body>    
+</html>
