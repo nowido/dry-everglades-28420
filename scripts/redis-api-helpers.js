@@ -254,26 +254,7 @@ Yadb.prototype.extractUpper = function(chunkName)
 
 function CallScriptChanger()
 {
-    $.ajax({
-        type : 'GET',
-        data: { waitInjection: true },
-        dataType: 'html',
-        success: function(data, st, xhr){
-            CallScriptChanger.prototype.replace(data);
-        },
-        error: function(xhr, st, er){
-            
-            const tickTime = 3000;
-            setTimeout(CallScriptChanger, tickTime);
-        }
-    });
-}
-
-CallScriptChanger.prototype.replace = function(newContent)
-{
-    document.open();
-    document.write(newContent);
-    document.close();
+    location.assign('/?waitInjection=true');
 }
 
 //-----------------------------------------------------------------------------
@@ -311,6 +292,29 @@ WatchDog.prototype.restartWatchDog = function()
 WatchDog.prototype.killWatchDog = function()
 {
     clearTimeout(this.timeoutId);
+}
+
+//-----------------------------------------------------------------------------
+
+function generateUniqueKey(length)
+{
+    var hexDigits = "0123456789ABCDEF";
+    
+    if(length === undefined)
+    {
+        length = 16;
+    }
+    
+    var s = "";
+    
+    for(var i = 0; i < length; ++i)
+    {
+        var index = Math.floor(16 * Math.random());
+        
+        s += hexDigits.charAt(index);
+    }
+    
+    return s;
 }
 
 //-----------------------------------------------------------------------------
