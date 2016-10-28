@@ -2,7 +2,7 @@
   "name": "d2-node",
   "version": "1.0.0",
   "description": "",
-  "main": "d2.js",
+  "main": "d2-redis.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
