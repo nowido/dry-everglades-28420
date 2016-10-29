@@ -43,17 +43,7 @@ var atomicIncrementAndExpireScriptSHA;
 var yad;
 
 var yadToken = 'AQAAAAAM8pOsAAOMAee8rd1rxUI2sfd1UoI-k7k';
-/*
-var yadCommands = 
-{
-    'YAD_CREATE_ITEM' : true,
-    'YAD_CREATE_FOLDER' : true,
-    'YAD_READ_ITEM' : true,
-    'YAD_REMOVE_ELEMENT' : true,
-    'YAD_LIST_ELEMENTS' : true,
-    'YAD_GET_ITEMS_COUNT' : true
-};
-*/
+
 //-----------------------------------------------------------------------------
 
 const UncaughtFatalExceptionCode = 1;
@@ -227,9 +217,9 @@ YadClient.prototype.readItem = function(folder, itemId, callback)
             {
                     // download content
                     
-                this.reqHelperGet(replyObject.href, atJson, function(err, reply){
-
-                    callback(err, reply);    
+                this.reqHelperGet(replyObject.href, atJson, function(e, content){
+                    
+                    callback(e, content);    
                 });
             }
         }
@@ -319,9 +309,21 @@ YadClient.prototype.reqHelper = function(method, reqUrl, headers, content, callb
     });
     
     req.once('response', function(res){
-        asyncReadTextStream(res, function(content){
-            callback(null, content);    
-        });
+        
+        if(res.statusCode < 300)
+        {
+            asyncReadTextStream(res, function(responseData){
+                callback(null, responseData);    
+            });
+        }
+        else if(res.headers["location"])
+        {
+            YadClient.prototype.reqHelper(method, res.headers["location"], headers, content, callback);            
+        }
+        else
+        {
+            callback({statusCode: res.statusCode}, null);
+        }
     });
     
     if(content)
@@ -339,10 +341,22 @@ YadClient.prototype.reqHelper = function(method, reqUrl, headers, content, callb
             strToWrite = JSON.stringify(content);
         }
         
-        req.write(strToWrite);    
+        asyncWriteTextStream(req, strToWrite, function(e){
+            
+            if(e)
+            {
+                callback(e, null);    
+            }
+            else
+            {
+                callback(null, statusOk);    
+            }
+        });
     }
-    
-    req.end();
+    else
+    {
+        req.end();
+    }
 }
 
 YadClient.prototype.reqHelperGet = function(reqUrl, headers, callback)
@@ -461,6 +475,18 @@ function asyncReadBinaryStream(stream, callbackOnDone)
 function asyncReadBinaryFile(path, callbackOnDone)
 {
   	asyncReadBinaryStream(fs.createReadStream(path), callbackOnDone)
+}
+
+function asyncWriteTextStream(stream, content, callbackOnDone)
+{
+  	stream.once('error', function(e){
+  	   callbackOnDone(e);
+  	});
+    
+    stream.once('finish', callbackOnDone);
+    
+    stream.write(content);
+    stream.end();
 }
 
 //-----------------------------------------------------------------------------
