@@ -14,13 +14,12 @@ $(document).ready(function(){
     }
     
         // setup Watchdog stuff
-    /*    
-    var watchDogEntry = new WatchDog(10000, function(watchdog){
+    
+    var watchDogEntry = new WatchDog(20000, function(watchdog){
         
         logInfo('Watchdog ' + watchdog.timeoutId + ' timeout (' + watchdog.timeout + ' msec)');    
     });
-    */
-    
+
         //
         
     const dbname = 'int_train';    
@@ -28,11 +27,12 @@ $(document).ready(function(){
     var yadb = new Yadb(dbname);
     
     var targetFolder = 'workspace/int_train-trainfeed/sources';
-    //var targetFolder = 'workspace/token1/sources';
     
     const constraint = 100;
     const outputSetSize = 1000;
     
+        //
+        
     function reportErrorAndStop(phases, phaseEntryIndex)
     {
         var entry = phases[phaseEntryIndex];
@@ -82,30 +82,39 @@ $(document).ready(function(){
     {
         var entry = phases[phaseEntryIndex];
         
-        var yadb = entry.args.yadb;
-        
-        yadb.retrieveFullCollection(function(response){
+        if(entry.args.done)
+        {
+            phases[phaseBuildRandom].proc(phases, phaseBuildRandom);
+        }
+        else
+        {
+            var yadb = entry.args.yadb;
             
-            if(response.reply)
-            {
-                logInfo('Full retrieved; length = ' + response.reply.length);    
+            yadb.retrieveFullCollection(function(response){
                 
-                var nextPhaseEntryIndex = phaseEntryIndex + 1;
+                if(response.reply)
+                {
+                    logInfo('Full retrieved; length = ' + response.reply.length);    
+                    
+                    entry.args.done = true;
+                    
+                    var nextPhaseEntryIndex = phaseEntryIndex + 1;
+                    
+                    phases[nextPhaseEntryIndex].args.collection = response.reply;
+                    
+                    phases[nextPhaseEntryIndex].proc(phases, nextPhaseEntryIndex);
+                }
+                else
+                {
+                    logInfo(response.error);
+                    phases[phaseStopOnError].proc(phases, phaseStopOnError);
+                }
                 
-                phases[nextPhaseEntryIndex].args.collection = response.reply;
+            }, function(chunksDone, chunksCount, chunkResponded){
                 
-                phases[nextPhaseEntryIndex].proc(phases, nextPhaseEntryIndex);
-            }
-            else
-            {
-                logInfo(response.error);
-                phases[phaseStopOnError].proc(phases, phaseStopOnError);
-            }
-            
-        }, function(chunksDone, chunksCount, chunkResponded){
-            
-            logInfo('[' + chunkResponded + ']. Done ' + chunksDone + ' of ' + chunksCount);    
-        });    
+                logInfo('[' + chunkResponded + ']. Done ' + chunksDone + ' of ' + chunksCount);    
+            });  
+        }
     }
     
     function prepareCollectionData(phases, phaseEntryIndex)
@@ -218,7 +227,7 @@ $(document).ready(function(){
             {
                 // take from 0
                 
-                rec = records0.pop();
+                rec = output0.pop();
                 
                 if(rec)
                 {
@@ -228,14 +237,14 @@ $(document).ready(function(){
                 {
                         // no 0s left, take from 1    
 
-                    outputSet.push(records1.pop());    
+                    outputSet.push(output1.pop());    
                 }
             }
             else 
             {
                 // take from 1
                 
-                rec = records1.pop();
+                rec = output1.pop();
                 
                 if(rec)
                 {
@@ -245,7 +254,7 @@ $(document).ready(function(){
                 {
                         // no 1s left, take from 0    
                         
-                    outputSet.push(records0.pop());    
+                    outputSet.push(output0.pop());    
                 }
             }
         }
@@ -253,9 +262,58 @@ $(document).ready(function(){
         var jsonStr = JSON.stringify(outputSet);
         
         logInfo('Generated ' + outputSet.length + ' records (' + jsonStr.length + ' UTF-8 chars)');
+        
+            //
+            
+        var nextPhaseEntryIndex = phaseEntryIndex + 1;
+        
+        phases[nextPhaseEntryIndex].args.content = outputSet;
+
+        phases[nextPhaseEntryIndex].proc(phases, nextPhaseEntryIndex);
     }
         
-    const phaseStopOnError = 4;
+    function writeResult(phases, phaseEntryIndex)
+    {
+        var entry = phases[phaseEntryIndex];
+        
+            // generate unique item name and write item to target folder
+        
+        var itemName = generateUniqueKey() + '.json';
+        
+        redisPostCommand('YAD_CREATE_ITEM', [entry.args.phaseFolder, itemName, entry.args.content], function(response){
+            
+            if(response.error)
+            {
+                logInfo(JSON.stringify(response.error));
+                phases[phaseStopOnError].proc(phases, phaseStopOnError);
+            }
+            else if(response.reply && response.reply.error)
+            {
+                logInfo(JSON.stringify(response.reply));
+                phases[phaseStopOnError].proc(phases, phaseStopOnError);
+            }
+            else
+            {
+                logInfo('Result item ' + itemName + ' possibly created (if not, no problem, no valuable data lost)');
+                
+                //logInfo('Killing watchdog ' + watchDogEntry.timeoutId);
+                //watchDogEntry.killWatchDog();
+
+                logInfo('Restarting watchdog for next ' + Math.floor(watchDogEntry.timeout/1000) + ' sec');
+                watchDogEntry.restartWatchDog();
+                
+                phases[0].proc(phases, 0);
+            }
+            
+        }, function(xhr, st, er){
+            
+            logInfo(er);
+            phases[phaseStopOnError].proc(phases, phaseStopOnError);
+        });
+    }
+    
+    const phaseBuildRandom = 3;
+    const phaseStopOnError = 5;
 
     var phases = 
     [
@@ -263,7 +321,8 @@ $(document).ready(function(){
     /*1*/{proc: retrieveFullCollection, args: {yadb: yadb}},  
     /*2*/{proc: prepareCollectionData, args: {}},  
     /*3*/{proc: buildRandomSet, args: {}},
-    /*4*/{proc: reportErrorAndStop, args: {phaseFolder: targetFolder}},
+    /*4*/{proc: writeResult, args: {phaseFolder: targetFolder}},
+    /*5*/{proc: reportErrorAndStop, args: {phaseFolder: targetFolder}}
     ];
     
     phases[0].proc(phases, 0);
