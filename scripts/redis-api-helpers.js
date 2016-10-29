@@ -14,8 +14,6 @@ function redisPostCommand(command, commandArgs, onTransferSuccess, onTransferFai
     });
 }
 
-//-----------------------------------------------------------------------------
-
 function redisWaitMessage(channel, onTransferSuccess, onTransferFail)
 {
     $.ajax({
@@ -25,8 +23,6 @@ function redisWaitMessage(channel, onTransferSuccess, onTransferFail)
         error: onTransferFail
     });
 }
-
-//-----------------------------------------------------------------------------
 
 function redisWaitPatternMessage(pattern, onTransferSuccess, onTransferFail)
 {
@@ -316,5 +312,15 @@ function generateUniqueKey(length)
     
     return s;
 }
+
+//-----------------------------------------------------------------------------
+
+function decimalRound(number, precision) 
+{
+    var factor = Math.pow(10, precision);
+    var tempNumber = number * factor;
+    var roundedTempNumber = Math.round(tempNumber);
+    return roundedTempNumber / factor;
+};
 
 //-----------------------------------------------------------------------------
