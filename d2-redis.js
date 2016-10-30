@@ -254,6 +254,16 @@ YadClient.prototype.getItemsCount = function(path, callback)
     });
 }
 
+YadClient.prototype.moveElement = function(pathSrc, pathDestination, callback)
+{
+    var data = 'from=app:/' + pathSrc + '&path=app:/' + pathDestination;
+
+    this.reqHelperPost(this.yadHost + '/v1/disk/resources/move?' + data, this.yadApiHeaders, "", function(err, reply){
+        
+        callback(err, reply);    
+    });
+}
+
 YadClient.prototype.readScript = function(name, callback)
 {
     this.reqHelperGet(this.yadHost + '/v1/disk/resources/download/?path=app:/scripts/' + name, this.yadApiHeaders, function(err, reply){
@@ -290,7 +300,8 @@ YadClient.prototype.commandsRegistry =
     'YAD_READ_ITEM' : {proc: YadClient.prototype.readItem, numArgs: 2},
     'YAD_REMOVE_ELEMENT' : {proc: YadClient.prototype.removeElement, numArgs: 1},
     'YAD_LIST_ELEMENTS' : {proc: YadClient.prototype.listElements, numArgs: 1},
-    'YAD_GET_ITEMS_COUNT' : {proc: YadClient.prototype.getItemsCount, numArgs: 1}
+    'YAD_GET_ITEMS_COUNT' : {proc: YadClient.prototype.getItemsCount, numArgs: 1},
+    'YAD_MOVE_ELEMENT' : {proc: YadClient.prototype.moveElement, numArgs: 2}
 };
 
 YadClient.prototype.reqHelper = function(method, reqUrl, headers, content, callback)
@@ -313,6 +324,7 @@ YadClient.prototype.reqHelper = function(method, reqUrl, headers, content, callb
         if(res.statusCode < 300)
         {
             asyncReadTextStream(res, function(responseData){
+                
                 callback(null, responseData);    
             });
         }
@@ -341,22 +353,15 @@ YadClient.prototype.reqHelper = function(method, reqUrl, headers, content, callb
             strToWrite = JSON.stringify(content);
         }
         
-        asyncWriteTextStream(req, strToWrite, function(e){
-            
-            if(e)
-            {
-                callback(e, null);    
-            }
-            else
-            {
-                callback(null, statusOk);    
-            }
-        });
+        req.write(strToWrite);
     }
-    else
-    {
-        req.end();
-    }
+    
+    req.end();
+}
+
+YadClient.prototype.reqHelperPost = function(reqUrl, headers, content, callback)
+{
+    this.reqHelper('POST', reqUrl, headers, content, callback);
 }
 
 YadClient.prototype.reqHelperGet = function(reqUrl, headers, callback)
