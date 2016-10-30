@@ -5,8 +5,8 @@
     // locks pair on Redis
     //  if locked, deletes sources item, then takes new pair in checklist
     // otherwise, simply skips delete phase and takes next pair in checklist
-    // if checklist is over, re-read folder
-    // if folder contains no proper pairs, change script
+    // if checklist is over, re-read <token> folders
+    // if folders contain no proper pairs, change script
     
 //-----------------------------------------------------------------------------
 
