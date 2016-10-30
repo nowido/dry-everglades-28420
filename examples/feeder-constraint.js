@@ -106,8 +106,11 @@ $(document).ready(function(){
                 }
                 else
                 {
-                    logInfo(response.error);
-                    phases[phaseStopOnError].proc(phases, phaseStopOnError);
+                    // to do: change this behaviour to 'try again'
+                    
+                    //logInfo(response.error);
+                    //phases[phaseStopOnError].proc(phases, phaseStopOnError);
+                    phases[phaseEntryIndex].proc(phases, phaseEntryIndex);
                 }
                 
             }, function(chunksDone, chunksCount, chunkResponded){
