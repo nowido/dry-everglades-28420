@@ -227,7 +227,7 @@ function processingBody(srcContent, callbackOnDone)
     // otherwise - to destination
     
     const decimalPlaces = 6;
-    const radius = 1.5;
+    const radius = 1.0;
     const qFactor = 2;
     const anfisRulesCount = 10;
     
