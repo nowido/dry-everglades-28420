@@ -238,7 +238,11 @@ YadClient.prototype.listElements = function(path, callback)
 {
     var fields = '&fields=_embedded.items.name,name';
     
-    this.reqHelperGet(this.yadHost + '/v1/disk/resources/?path=app:/' + path + fields, this.yadApiHeaders, function(err, reply){
+    var limit = '&limit=100';
+    
+    // to do: iteratively read full folder content!
+    
+    this.reqHelperGet(this.yadHost + '/v1/disk/resources/?path=app:/' + path + fields + limit, this.yadApiHeaders, function(err, reply){
         
         callback(err, reply);    
     });
