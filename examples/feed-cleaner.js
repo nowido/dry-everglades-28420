@@ -2,7 +2,7 @@
 
     // Feed cleaner, FC;
     // finds pairs of 'source item : result item' in <token> folder
-    // locks pair on Redis
+    // locks pair on Redis (use 'token:item:pair' key template)
     //  if locked, deletes sources item, then takes new pair in checklist
     // otherwise, simply skips delete phase and takes next pair in checklist
     // if checklist is over, re-read <token> folders
