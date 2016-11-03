@@ -7,8 +7,6 @@
     //  writes result block to results,
     //  restarts reading workspace folders, and so on
 
-// TO DO this is not ANFIS LBFGS training implementation yet; work in progress
-
 //-----------------------------------------------------------------------------
 
 function logInfo(info)
@@ -249,7 +247,7 @@ function workerEntry()
     		
     		errs[i] = d;		
     		currentError += d * d; 
-    		
+
     		point_offset += pointDimension;			
     	}
     	
@@ -567,6 +565,8 @@ function workerEntry()
     			
     			if(wolfeOk)
     			{
+    			    break;
+    			    /*
     					// store good alpha ...
     				alphaLatch = alpha;
     				
@@ -574,6 +574,7 @@ function workerEntry()
     				alpha *= alphaFactor;	
     				
     				previousStepWasGood = true;									
+    				*/
     			}
     			else if(!previousStepWasGood)
     			{
@@ -623,9 +624,10 @@ function workerEntry()
     		{
     			this.p[j] = -this.Grad[this.ppCurrent][j];
     		}
-    
-    		this.linearSearch(linearSearchStepsCount);	
 
+    		this.linearSearch(linearSearchStepsCount);	
+            
+            //*
     		if(isNaN(this.f[this.ppNext]))
     		{
     			this.weird = true;
@@ -647,13 +649,13 @@ function workerEntry()
     			
     			break;
     		}		
-    
+            
     		if(Math.abs(this.f[this.ppCurrent] - this.f[this.ppNext]) < this.epsilon)
     		{
     			this.local = true;
     			break;
     		}		
-    
+            //*/
     			//
     		this.vectorDifference
     		(
@@ -784,6 +786,7 @@ function workerEntry()
     			//
     		this.linearSearch(linearSearchStepsCount);	
     		
+    		//*
     		if(isNaN(this.f[this.ppNext]))
     		{
     			this.weird = true;
@@ -805,13 +808,13 @@ function workerEntry()
     			
     			break;
     		}		
-    
+            
     		if(Math.abs(this.f[this.ppCurrent] - this.f[this.ppNext]) < this.epsilon)
     		{
     			this.local = true;
     			break;
     		}		
-    		
+    		//*/
     			// forget the oldest history entry, shift from past to current			
     				
     		var oldestS = this.historyS[0];
@@ -918,7 +921,7 @@ function workerEntry()
         const lbfgsHistorySize = 20;
         const epsilon = 1e-8;
         const linearSearchStepsCount = 20;
-        const reportSteps = 20;
+        const reportSteps = 50;
 
         var lbfgs = new AntigradientLbfgs(workerArgs.anfisParameters.length, lbfgsHistorySize);
         
@@ -1053,7 +1056,7 @@ function processingBody(model, callbackOnDone)
         anfisParameters: model.parameters,
         tabPoints: tabPoints, 
         knownOutput: knownOutput,
-        lbfgsSteps: 300
+        lbfgsSteps: 1000
     });    
 }
 
