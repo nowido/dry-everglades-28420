@@ -14,12 +14,12 @@ $(document).ready(function(){
     }
     
         // setup Watchdog stuff
-    
+    /*
     var watchDogEntry = new WatchDog(20000, function(watchdog){
         
         logInfo('Watchdog ' + watchdog.timeoutId + ' timeout (' + watchdog.timeout + ' msec)');    
     });
-
+    */
         //
         
     const dbname = 'int_train';    
@@ -302,8 +302,8 @@ $(document).ready(function(){
                 //logInfo('Killing watchdog ' + watchDogEntry.timeoutId);
                 //watchDogEntry.killWatchDog();
 
-                logInfo('Restarting watchdog for next ' + Math.floor(watchDogEntry.timeout/1000) + ' sec');
-                watchDogEntry.restartWatchDog();
+                //logInfo('Restarting watchdog for next ' + Math.floor(watchDogEntry.timeout/1000) + ' sec');
+                //watchDogEntry.restartWatchDog();
                 
                 phases[0].proc(phases, 0);
             }
