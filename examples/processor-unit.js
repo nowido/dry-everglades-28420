@@ -227,11 +227,23 @@ function processingBody(srcContent, callbackOnDone)
     // otherwise - to destination
     
     const decimalPlaces = 6;
-    const radius = 1.0;
-    const qFactor = 2;
+    const radius = 2.2;
+    const qFactor = 4;
     const anfisRulesCount = 10;
+    const separator = 0;
+    const amplitude = 2;
     
-    var model = {footprint: 'initialized', rulesCount: anfisRulesCount, rangesMin: [], rangesMax: [], trainSet: [/*normalized*/], parameters: []};
+    var model = 
+    {
+        footprint: 'initialized', 
+        rulesCount: anfisRulesCount, 
+        rangesMin: [], 
+        rangesMax: [],
+        separator: separator,
+        amplitude: amplitude,
+        trainSet: [/*normalized*/], 
+        parameters: []
+    };
     
     // src content is array of records;
     //  each record is an array of fields
@@ -250,11 +262,11 @@ function processingBody(srcContent, callbackOnDone)
     var yIndex = fieldsCount - 1;
     
         // find fields ranges 
-        
+
     var record = srcContent[0];
     var value;
     
-    for(var col = 0; col < fieldsCount; ++col)
+    for(var col = 0; col < yIndex; ++col)
     {
         value = record[col];
         
@@ -266,7 +278,7 @@ function processingBody(srcContent, callbackOnDone)
     {
         record = srcContent[row];
         
-        for(var col = 0; col < fieldsCount; ++col)
+        for(var col = 0; col < yIndex; ++col)
         {
             value = record[col];
             
@@ -285,6 +297,16 @@ function processingBody(srcContent, callbackOnDone)
         }
     }
     
+        // known Y is {0,1}, we map it to {-amplitude, +amplitude}
+
+    model.rangesMin[yIndex] = -amplitude;
+    model.rangesMax[yIndex] = +amplitude;
+
+        // known Y is {0,1}, we map it to {0, +amplitude}
+        
+    //model.rangesMin[yIndex] = 0;
+    //model.rangesMax[yIndex] = amplitude;
+    
     var ranges = [];
     
     for(var col = 0; col < fieldsCount; ++col)
@@ -302,13 +324,28 @@ function processingBody(srcContent, callbackOnDone)
         
         for(var col = 0; col < fieldsCount; ++col)
         {
-            if(ranges[col] > 0)
-            {
-                value = (record[col] - model.rangesMin[col]) / ranges[col];   
+            var value = record[col];
+            
+            if(col === yIndex)
+            {   
+                    // known Y is {0,1}, we map it to {-amplitude, +amplitude}
+                    
+                value = (value > 0) ? +amplitude : -amplitude;
+                
+                    // known Y is {0,1}, we map it to {0, +amplitude}
+                    
+                //value = (value > 0) ? amplitude : 0;
             }
             else
             {
-                value = 0;
+                if(ranges[col] > 0)
+                {
+                    value = (value - model.rangesMin[col]) / ranges[col];   
+                }
+                else
+                {
+                    value = 0;
+                }
             }
             
             recordNormalized.push(decimalRound(value, decimalPlaces));
@@ -336,6 +373,15 @@ function processingBody(srcContent, callbackOnDone)
             var clustersCount = clusters.length;
             
             logInfo('Found ' + clustersCount + ' clusters. The biggest cluster contains ' + clusters[0].points.length + ' points');
+            
+            var s = '';
+            
+            for(var i = 0; i < clustersCount; ++i)
+            {
+                s += clusters[i].points.length + ', ';
+            }
+            
+            logInfo(s);
                 
                 // initialize model parameters
                 // a - cluster center, q - qFactor * radius, b = 0, l0 = average y for points in cluster
@@ -355,7 +401,8 @@ function processingBody(srcContent, callbackOnDone)
                     ++parameterIndex;                    
                 }
                     // q
-                var q = decimalRound(qFactor * radius, decimalPlaces);
+                //var q = decimalRound(qFactor * radius, decimalPlaces);
+                var q = decimalRound(qFactor, decimalPlaces);
                 
                 for(var col = 0; col < yIndex; ++col)
                 {
