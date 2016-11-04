@@ -211,7 +211,7 @@ $(document).ready(function(){
         phases[phaseRevision].args.checklist = checklist;    
         phases[phaseRevision].args.randomIndex = randomIndex;
             
-            // check Redis key for this entry by Atomically INCrementing 'token:item_name:pair'
+            // check Redis key for this entry by Atomically INCrementing key
             // (also sets key EXpiration time)
 
         redisPostCommand('aincex', [key, keyExpirationTime], function(response){
@@ -224,8 +224,6 @@ $(document).ready(function(){
                 
                 nextPhaseEntryIndex = phaseExamine;
                 
-                    // examine phase will use item name
-                    
                 phases[phaseExamine].args.name = name;
             }
             else
@@ -235,7 +233,9 @@ $(document).ready(function(){
 
             phases[nextPhaseEntryIndex].proc(phases, nextPhaseEntryIndex);
             
-        }, function(){
+        }, function(xhr, st, er){
+            
+            logInfo('* ' + er);
             
                 // if network transfer error occurs, it's better skip this entry
                 //      (goes to revision of checklist)
@@ -247,15 +247,11 @@ $(document).ready(function(){
     {
         var entry = phases[phaseEntryIndex];
         
-        var srcFolder = entry.args.srcFolder;
-        var resFolder = entry.args.resFolder;
-        var targetFolder = entry.args.targetFolder;
-        
         var name = entry.args.name;
         
-        logInfo('Reading item ' + resFolder + '/' + name);
+        logInfo('Reading item ' + entry.args.resFolder + '/' + name);
         
-        redisPostCommand('YAD_READ_ITEM', [resFolder, name], function(response){
+        redisPostCommand('YAD_READ_ITEM', [entry.args.resFolder, name], function(response){
             
             if(response && response.reply)
             {
@@ -267,23 +263,21 @@ $(document).ready(function(){
                 
                 if(isGarbage(item))
                 {
-                    logInfo(name + ' seems improper to further processing; transferring to garbage folder');    
+                    logInfo(name + ' seems improper to further processing; transferring to garbage bin');    
+                    
+                    phases[nextPhaseEntryIndex].args.toFolder = entry.args.garbageFolder;
                 }
-                else if(!isProperToFeedback(item))
+                else if(isProperToFeedback(item))
                 {
-                        // do not feedback this item
-                    
-                    logInfo(name + ' is improper to feedback; transferring to target folder');
-                    
-                    phases[nextPhaseEntryIndex].args.toFolder = targetFolder;
-                    
-                    // to do: drop weird, diverged, local items to special garbage folder
+                    logInfo(name + ' will continue training cycle');
+
+                    phases[nextPhaseEntryIndex].args.toFolder = entry.args.srcFolder;
                 }
                 else
                 {
-                    logInfo(name + ' goes back');
-
-                    phases[nextPhaseEntryIndex].args.toFolder = srcFolder;
+                    logInfo(name + ' is improper to feedback; transferring to target folder');
+                    
+                    phases[nextPhaseEntryIndex].args.toFolder = entry.args.targetFolder;
                 }
                 
                 phases[nextPhaseEntryIndex].proc(phases, nextPhaseEntryIndex);
@@ -294,7 +288,9 @@ $(document).ready(function(){
                 phases[phaseRevision].proc(phases, phaseRevision);
             }
             
-        }, function(){
+        }, function(xhr, st, er){
+            
+            logInfo('* ' + er);
             
                 // on error it is better to skip this item
             phases[phaseRevision].proc(phases, phaseRevision);
@@ -327,8 +323,9 @@ $(document).ready(function(){
             
         }, function(xhr, st, er){
             
+            logInfo('* ' + er);
+            
                 // on error it is better to restart
-            logInfo('*Error ' + er);    
             restart(phases);
         });        
     }
