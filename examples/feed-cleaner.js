@@ -30,7 +30,8 @@ $(document).ready(function(){
     */
         //
         
-    var token = 'int_train-trainfeed';
+    //var token = 'int_train-trainfeed';
+    var token = 'int_train-maintrain';
 
         //
         
