@@ -174,13 +174,26 @@ function processingBody(itemsContent, testCollection, callbackOnDone)
     
     var itemNames = Object.keys(itemsContent);
     var itemsCount = itemNames.length;
+
+        // to do: how we may use items separators and amplitudes?
+    const separator = 0;
     
     var ensemble = 
     {
-        items: []
+        items: [],
+        separator: separator
     };
-    
+
+        //
+        
     var ensembleOutput = new Float64Array(testPointsCount);
+    
+    var voting = [];
+    
+    for(var i = 0; i < testPointsCount; ++i)
+    {
+        voting[i] = [0, 0];
+    }
         
     for(var i = 0; i < itemsCount; ++i)
     {
@@ -244,20 +257,25 @@ function processingBody(itemsContent, testCollection, callbackOnDone)
         
         for(var j = 0; j < testPointsCount; ++j)
         {
-            ensembleOutput[j] += output[j];
+            var v = output[j];
+            
+            ensembleOutput[j] += v;
+            
+            var classValue = (v > separator) ? 1 : 0; 
+            
+            voting[j][classValue]++;
         }
     }
         // now test ensemble
-    
-        // to do: how we may use items separators and amplitudes?
-    const separator = 0;
-    ensemble.separator = separator;
     
     var records0 = 0;
     var records1 = 0;
     
     var err0 = 0;
     var err1 = 0;
+    
+    var err0_voting = 0;
+    var err1_voting = 0;
     
     var yIndex = tabFieldsCount;
     
@@ -282,14 +300,30 @@ function processingBody(itemsContent, testCollection, callbackOnDone)
         {
             ++err1;
         }
+        
+        var vo = (voting[row][0] > voting[row][1]) ? 0 : 1;
+        
+        if(ko === 0)
+        {
+            if(vo !== 0)
+            {
+                ++err0_voting;
+            }
+        }
+        else if(vo !== 1)
+        {
+            ++err1_voting;
+        }
     }
     
     
     ensemble.classifierError = decimalRound((err0 + err1) / testPointsCount, decimalPlaces);
-
+    
+    ensemble.votingError = decimalRound((err0_voting + err1_voting) / testPointsCount, decimalPlaces);
+    
     logInfo('Tested classifier errors: err0: ' + err0 + ', err1: ' + err1 + ', separator: ' + separator +
-        ' [' + 100 * ensemble.classifierError + '%];' +
-        ' tested on ' + testPointsCount + 
+        ' [' + 100 * ensemble.classifierError + '%]; voting errors: err0: ' +
+        err0_voting + ', err1: ' + err1_voting + ' [' + 100 * ensemble.votingError + '%]; tested on ' + testPointsCount + 
             ' points, ' + records0 +' 0s and ' + records1 + ' 1s');
 
     callbackOnDone(ensemble);
@@ -320,7 +354,7 @@ $(document).ready(function(){
     
     var yadb = new Yadb(dbname);
     
-    const ensembleSize = 5;
+    const ensembleSize = 7;
     
     const waitTime = 2000; // ms
         
