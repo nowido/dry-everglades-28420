@@ -30,8 +30,11 @@ $(document).ready(function(){
     */
         //
         
-    var token = 'int_train-trainfeed';
-    var targetToken = 'int_train-maintrain';
+    //var token = 'int_train-trainfeed';
+    //var targetToken = 'int_train-maintrain';
+
+    var token = 'int_train-maintrain';
+    var targetToken = 'int_train-test';
 
         //
         
