@@ -378,8 +378,7 @@ function workerEntry()
     		//
     	this.epsilon = 0.001;
     	
-    		//
-    	this.firstStep = true;
+    	this.reset();
     }
     
     AntigradientLbfgs.prototype.useGradientProvider = function(fillGradient)
@@ -470,6 +469,8 @@ function workerEntry()
     	this.diverged = false;
     	this.local = false;
     	this.weird = false;
+    	
+    	this.stepsDone = 0;
     	
     	return this;
     }
@@ -620,6 +621,8 @@ function workerEntry()
 
     	for(var i = 0; i < m; ++i)
     	{
+    	    this.stepsDone++;
+    	    
     		for(var j = 0; j < dimension; ++j)
     		{
     			this.p[j] = -this.Grad[this.ppCurrent][j];
@@ -780,6 +783,8 @@ function workerEntry()
     	
     	for(var step = 0; step < stepsCount; ++step)
     	{
+    	    this.stepsDone++;
+    	    
     			// do L-BFGS stuff
     		this.lbfgsTwoLoops();
     			
@@ -956,6 +961,7 @@ function workerEntry()
             local: lbfgs.local,
             optX: optX, 
             error: err, 
+            stepsDone: lbfgs.stepsDone,
             initialError: initialError
         });
     }
@@ -965,7 +971,7 @@ function workerEntry()
 
 function isProperFootprint(footprint)
 {
-    return (footprint === 'initialized');
+    return (footprint === 'initialized') || (footprint === 'trained');
 }
 
 //-----------------------------------------------------------------------------
@@ -974,8 +980,10 @@ function processingBody(model, callbackOnDone)
 {
     const decimalPlaces = 6;
 
+    const lbfgsSteps = 1000;
+
     // srcContent is model
-    // {footprint: 'initialized', rulesCount: anfisRulesCount, rangesMin: [], rangesMax: [], trainSet: [/*normalized*/], parameters: []};
+    // {footprint: 'initialized' | 'trained', rulesCount: anfisRulesCount, rangesMin: [], rangesMax: [], trainSet: [/*normalized*/], parameters: []};
     
     var pointsCount = model.trainSet.length;
     var fieldsCount = model.trainSet[0].length;
@@ -1013,17 +1021,36 @@ function processingBody(model, callbackOnDone)
     
     URL.revokeObjectURL(workerUrl);
     
+    var timeStart;
+    
     worker.onmessage = function(e)
     {
         if(e.data.done)
         {
+            var timeWorked = (Date.now() - timeStart) / 1000;
+            
             worker.terminate();
             
-            logInfo('Training done. {weird: ' + e.data.weird + 
-                ', diverged: ' + e.data.diverged + 
-                ', local: ' + e.data.local + 
+            var context = {weird: e.data.weird, diverged: e.data.diverged, local: e.data.local};
+            
+            logInfo('Training done in ' + timeWorked + ' sec (' + e.data.stepsDone + ' steps total); {weird: ' + context.weird + 
+                ', diverged: ' + context.diverged + 
+                ', local: ' + context.local + 
                 '}, errSquared: ' + decimalRound(e.data.error, decimalPlaces) + 
                 ', initial errSquared: ' + decimalRound(e.data.initialError, decimalPlaces));
+            
+            model.context = context;
+            
+            if(model.stepsDone === undefined)
+            {
+                model.stepsDone = e.data.stepsDone;
+            }
+            else
+            {
+                model.stepsDone += e.data.stepsDone;
+            }
+            
+            delete model.parameters;
             
             model.optimizedParameters = [];
             
@@ -1050,13 +1077,15 @@ function processingBody(model, callbackOnDone)
         }
     }
     
+    timeStart = Date.now();
+    
     worker.postMessage({
         pointDimension: tabFieldsCount,
         anfisRulesCount: model.rulesCount, 
-        anfisParameters: model.parameters,
+        anfisParameters: (model.footprint === 'trained') ? model.optimizedParameters : model.parameters,
         tabPoints: tabPoints, 
         knownOutput: knownOutput,
-        lbfgsSteps: 1000
+        lbfgsSteps: lbfgsSteps
     });    
 }
 
@@ -1203,7 +1232,7 @@ $(document).ready(function(){
                 
                 phases[0].proc(phases, 0);
                 
-            }, Math.floor(Math.random() * keyExpirationTime * 1000));
+            }, keyExpirationTime * 1000);
             
         }
         else
